@@ -5,7 +5,7 @@ import {
   ResponsiveContainer, AreaChart, Area, ReferenceLine
 } from 'recharts';
 import { PriceData } from '../types';
-import { AlertTriangle, RefreshCcw, BarChart3 } from 'lucide-react';
+import { AlertTriangle, RefreshCcw, BarChart3, ShieldAlert } from 'lucide-react';
 
 interface Props {
   data: PriceData[]; 
@@ -40,16 +40,19 @@ const MoutaiChart: React.FC<Props> = ({ data, prediction, onRetry, isLoading }) 
   }, []);
 
   const chartData = useMemo(() => {
-    const lastHistoryDate = data.length > 0 ? data[data.length - 1].date : null;
+    const lastHistoryPoint = data.length > 0 ? data[data.length - 1] : null;
 
     return combinedData.map((item) => {
       const isHistory = item.type === 'history';
       const isPrediction = item.type === 'prediction';
+      const isBridge = lastHistoryPoint && item.date === lastHistoryPoint.date;
       
       return {
         ...item,
         historyPrice: isHistory ? item.price : null,
-        predictionPrice: (isPrediction || (lastHistoryDate && item.date === lastHistoryDate)) ? item.price : null
+        predictionPrice: (isPrediction || isBridge) ? item.price : null,
+        // For the confidence area, we need the range
+        predictionRange: (isPrediction || isBridge) ? [item.lowerBound || item.price, item.upperBound || item.price] : null
       };
     });
   }, [combinedData, data]);
@@ -92,6 +95,10 @@ const MoutaiChart: React.FC<Props> = ({ data, prediction, onRetry, isLoading }) 
                 <stop offset="60%" stopColor="#D4AF37" stopOpacity={0.15}/>
                 <stop offset="95%" stopColor="#D4AF37" stopOpacity={0}/>
               </linearGradient>
+              <linearGradient id="colorRange" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.1}/>
+                <stop offset="95%" stopColor="#D4AF37" stopOpacity={0.05}/>
+              </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="4 4" stroke="#222" vertical={false} />
             <XAxis 
@@ -124,14 +131,41 @@ const MoutaiChart: React.FC<Props> = ({ data, prediction, onRetry, isLoading }) 
               labelStyle={{ color: '#666', marginBottom: '8px', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em' }}
               cursor={{ stroke: '#D4AF37', strokeWidth: 1.5, strokeDasharray: '5 5' }}
               formatter={(value: any, name: string, props: any) => {
+                if (name === 'predictionRange') return null; // Hide the range from the main tooltip items
                 const isPred = props.dataKey === 'predictionPrice';
                 const color = isPred ? '#D4AF37' : '#3b82f6';
                 const label = isPred ? 'AI 预测批价' : '市场真实批价';
+                
+                // Add range info if available
+                if (isPred && props.payload.upperBound) {
+                  return [
+                    <div key="val" className="flex flex-col">
+                      <span style={{ color }}>¥${value.toLocaleString()}</span>
+                      <span className="text-[10px] text-neutral-500 font-mono mt-1">
+                        范围: ¥${props.payload.lowerBound.toLocaleString()} - ¥${props.payload.upperBound.toLocaleString()}
+                      </span>
+                    </div>,
+                    label
+                  ];
+                }
+                
                 return [`¥${value.toLocaleString()}`, label, { color }];
               }}
               labelFormatter={(label) => `周期: ${label}`}
             />
             
+            {/* Confidence Range Shaded Area */}
+            <Area 
+              type="monotone" 
+              dataKey="predictionRange"
+              stroke="none"
+              fill="url(#colorRange)"
+              fillOpacity={1}
+              connectNulls={true}
+              isAnimationActive={true}
+              animationDuration={2000}
+            />
+
             <Area 
               type="monotone" 
               dataKey="historyPrice"

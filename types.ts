@@ -2,6 +2,8 @@
 export interface PriceData {
   date: string;
   price: number;
+  upperBound?: number;
+  lowerBound?: number;
 }
 
 export interface GroundingSource {
@@ -14,7 +16,7 @@ export interface PredictionState {
   lastUpdate: string;
   history: PriceData[];
   prediction: PriceData[];
-  sentimentScore: number; // New: -100 (Extremely Bearish) to 100 (Extremely Bullish)
+  sentimentScore: number; 
   news: string;
   sources: GroundingSource[];
   isUpdating: boolean;

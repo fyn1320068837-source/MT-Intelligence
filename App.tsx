@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { TrendingUp, RefreshCcw, BookOpen, ExternalLink, Activity, Info, Calendar, AlertTriangle, Zap, Search, Globe, History, BrainCircuit, MessageSquareText, ShieldCheck, BarChart3, CheckCircle2 } from 'lucide-react';
+import { TrendingUp, RefreshCcw, BookOpen, ExternalLink, Activity, Info, Calendar, AlertTriangle, Zap, Search, Globe, History, BrainCircuit, MessageSquareText, ShieldCheck, BarChart3, CheckCircle2, ShieldHalf } from 'lucide-react';
 import { fetchMoutaiPrediction } from './services/gemini';
 import { AppState, PriceData } from './types';
 import MoutaiChart from './components/MoutaiChart';
@@ -30,10 +30,10 @@ const App: React.FC = () => {
         data: {
           currentPrice: data.current_price,
           history: data.history || [],
-          prediction: data.forecast,
+          prediction: data.prediction || [], // Ensure this matches PredictionState key
           sentimentScore: data.sentiment_score,
           news: data.market_summary || "多维行情实时同步成功。",
-          sources: sources,
+          sources: sources || [],
           lastUpdate: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
           isUpdating: false
         },
@@ -116,9 +116,17 @@ const App: React.FC = () => {
                </span>
                <span className="text-[10px] font-bold text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded border border-blue-400/20 uppercase">CNY</span>
              </div>
-             <div className="flex items-center justify-between text-[10px] text-neutral-500 font-mono border-t border-neutral-800 pt-5">
-               <span className="flex items-center gap-1"><ShieldCheck className="w-3 h-3 text-[#C41E3A]" /> 垂直数据校准</span>
-               <span className="text-neutral-400">数据置信度: <b className="text-[#D4AF37]">{confidenceLevel}%</b></span>
+             <div className="flex flex-col gap-4 border-t border-neutral-800 pt-5">
+               <div className="flex items-center justify-between text-[10px] text-neutral-500 font-mono">
+                 <span className="flex items-center gap-1"><ShieldCheck className="w-3 h-3 text-[#C41E3A]" /> 预测置信度</span>
+                 <span className="text-[#D4AF37] font-bold">{confidenceLevel}%</span>
+               </div>
+               <div className="h-1 w-full bg-neutral-800 rounded-full overflow-hidden">
+                 <div 
+                   className="h-full bg-gradient-to-r from-[#C41E3A] to-[#D4AF37] transition-all duration-1000"
+                   style={{ width: `${confidenceLevel}%` }}
+                 ></div>
+               </div>
              </div>
           </section>
 
@@ -186,7 +194,7 @@ const App: React.FC = () => {
                 </h2>
                 <p className="text-[11px] text-neutral-500 mt-2 uppercase tracking-[0.3em] font-mono opacity-60">Search-Based Market Calibration</p>
               </div>
-              <div className="flex items-center gap-6 bg-black/40 px-6 py-3 rounded-full border border-white/5 backdrop-blur-lg">
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6 bg-black/40 px-6 py-3 rounded-full border border-white/5 backdrop-blur-lg">
                 <div className="flex items-center gap-3">
                   <div className="w-3 h-3 bg-blue-500 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.6)]"></div>
                   <span className="text-[10px] text-neutral-400 font-black uppercase tracking-widest">真实批价</span>
@@ -194,6 +202,10 @@ const App: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <div className="w-3 h-3 bg-[#D4AF37] rounded-full shadow-[0_0_8px_rgba(212,175,55,0.6)]"></div>
                   <span className="text-[10px] text-neutral-400 font-black uppercase tracking-widest">AI 预测</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 bg-[#D4AF37]/30 rounded-full"></div>
+                  <span className="text-[10px] text-neutral-400 font-black uppercase tracking-widest">置信区间</span>
                 </div>
               </div>
             </div>
