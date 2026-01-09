@@ -1,0 +1,5 @@
+{
+  "name": "MT Intelligence",
+  "description": "A high-end financial dashboard for predicting Moutai Feitian price trends over the next 30 days, powered by Gemini 3 and real-time market search grounding.",
+  "requestFramePermissions": []
+}
