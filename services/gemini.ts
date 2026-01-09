@@ -1,10 +1,12 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-const MODEL_NAME = 'gemini-3-flash-preview'; 
+// Use gemini-3-pro-preview for complex reasoning and data forecasting tasks.
+const MODEL_NAME = 'gemini-3-pro-preview'; 
 
 export const fetchMoutaiPrediction = async () => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+  // Always use process.env.API_KEY directly as per SDK guidelines.
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const today = new Date();
   const dateStr = today.toISOString().split('T')[0];
@@ -76,6 +78,7 @@ export const fetchMoutaiPrediction = async () => {
       },
     });
 
+    // Access the .text property directly (do not call it as a function).
     const rawText = response.text || "{}";
     let data;
     try {

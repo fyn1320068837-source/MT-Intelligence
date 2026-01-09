@@ -59,7 +59,7 @@ const MoutaiChart: React.FC<Props> = ({ data, prediction, onRetry, isLoading }) 
 
   if (chartData.length === 0 && !isLoading) {
     return (
-      <div className="w-full h-[420px] bg-neutral-900/40 border border-neutral-800/40 rounded-[2.5rem] flex flex-col items-center justify-center p-8 text-center backdrop-blur-sm">
+      <div className="w-full h-[500px] lg:h-[600px] bg-neutral-900/40 border border-neutral-800/40 rounded-[2.5rem] flex flex-col items-center justify-center p-8 text-center backdrop-blur-sm">
         <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-6">
           <AlertTriangle className="w-8 h-8 text-red-500/50" />
         </div>
@@ -79,7 +79,7 @@ const MoutaiChart: React.FC<Props> = ({ data, prediction, onRetry, isLoading }) 
   }
 
   return (
-    <div className="w-full h-[420px] bg-black/40 p-4 rounded-3xl border border-neutral-800/40 relative group overflow-hidden">
+    <div className="w-full h-[500px] lg:h-[600px] bg-black/40 p-4 rounded-3xl border border-neutral-800/40 relative group overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none duration-1000"></div>
       
       {chartData.length > 0 && (
@@ -105,7 +105,7 @@ const MoutaiChart: React.FC<Props> = ({ data, prediction, onRetry, isLoading }) 
               dataKey="displayDate" 
               stroke="#444" 
               tick={{fontSize: 9, fill: '#666', fontWeight: 600}}
-              interval={Math.floor(chartData.length / 10)}
+              interval={Math.floor(chartData.length / 12)}
               axisLine={false}
               tickLine={false}
               dy={15}
@@ -125,24 +125,23 @@ const MoutaiChart: React.FC<Props> = ({ data, prediction, onRetry, isLoading }) 
                 borderRadius: '16px',
                 backdropFilter: 'blur(12px)',
                 boxShadow: '0 20px 25px -5px rgba(0,0,0,0.8)',
-                padding: '12px'
+                padding: '16px'
               }}
               itemStyle={{ fontWeight: '900', fontSize: '14px' }}
               labelStyle={{ color: '#666', marginBottom: '8px', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.1em' }}
               cursor={{ stroke: '#D4AF37', strokeWidth: 1.5, strokeDasharray: '5 5' }}
               formatter={(value: any, name: string, props: any) => {
-                if (name === 'predictionRange') return null; // Hide the range from the main tooltip items
+                if (name === 'predictionRange') return null;
                 const isPred = props.dataKey === 'predictionPrice';
                 const color = isPred ? '#D4AF37' : '#3b82f6';
                 const label = isPred ? 'AI 预测批价' : '市场真实批价';
                 
-                // Add range info if available
                 if (isPred && props.payload.upperBound) {
                   return [
                     <div key="val" className="flex flex-col">
-                      <span style={{ color }}>¥${value.toLocaleString()}</span>
+                      <span style={{ color }}>¥{value.toLocaleString()}</span>
                       <span className="text-[10px] text-neutral-500 font-mono mt-1">
-                        范围: ¥${props.payload.lowerBound.toLocaleString()} - ¥${props.payload.upperBound.toLocaleString()}
+                        范围: ¥{props.payload.lowerBound.toLocaleString()} - ¥{props.payload.upperBound.toLocaleString()}
                       </span>
                     </div>,
                     label
@@ -151,10 +150,9 @@ const MoutaiChart: React.FC<Props> = ({ data, prediction, onRetry, isLoading }) 
                 
                 return [`¥${value.toLocaleString()}`, label, { color }];
               }}
-              labelFormatter={(label) => `周期: ${label}`}
+              labelFormatter={(label) => `时间节点: ${label}`}
             />
             
-            {/* Confidence Range Shaded Area */}
             <Area 
               type="monotone" 
               dataKey="predictionRange"
@@ -199,7 +197,7 @@ const MoutaiChart: React.FC<Props> = ({ data, prediction, onRetry, isLoading }) 
               stroke="#C41E3A" 
               strokeWidth={1.5}
               strokeDasharray="4 4" 
-              label={{ position: 'top', value: '今日行情', fill: '#C41E3A', fontSize: 10, fontWeight: 'black', letterSpacing: '0.1em' }} 
+              label={{ position: 'top', value: '今日行情点', fill: '#C41E3A', fontSize: 10, fontWeight: 'black', letterSpacing: '0.1em' }} 
             />
           </AreaChart>
         </ResponsiveContainer>
