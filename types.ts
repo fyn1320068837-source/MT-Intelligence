@@ -14,6 +14,7 @@ export interface PredictionState {
   lastUpdate: string;
   history: PriceData[];
   prediction: PriceData[];
+  sentimentScore: number; // New: -100 (Extremely Bearish) to 100 (Extremely Bullish)
   news: string;
   sources: GroundingSource[];
   isUpdating: boolean;

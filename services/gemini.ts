@@ -10,18 +10,25 @@ export const fetchMoutaiPrediction = async () => {
   const dateStr = today.toISOString().split('T')[0];
 
   const prompt = `
-    你是一名顶级白酒行业分析师。
+    你是一名白酒行业首席数据分析师。当前任务是为飞天茅台（53度/500ml/散瓶）建立精准的价格模型。
     
-    【核心基准校准】
-    当前市场反馈“2024/2025年飞天茅台 53度 500ml 散瓶”的真实批价已回落至约 1495元 - 1540元/瓶 区间。
+    【核心指令：历史价格校准】
+    1. 利用 Google Search 检索过去 7 天（从昨日倒推）每日的行业公认批发价（批价）。
+    2. 请搜索“今日酒价”、“酒价行情”、“不瓶瓶”或“酒说”等专业垂直媒体的每日报价单。
+    3. **严禁生成估算数据**。如果某日数据缺失，请根据前后两日的搜索结果进行加权平均。
     
-    任务目标：
-    1. 实时检索：通过 Google Search 检索今日最新的“茅台批价”、“茅台价格走势”以及白酒行业去库存相关的最新新闻。
-    2. 基准设定：以搜到的今日真实批价（参考 1495-1540 元区间）为起点，推演【2026年份飞天茅台】（作为未来核心流通指数标的）未来30天的价格走势。
-    3. 深度分析：必须分析为何价格处于当前低位（如：需求端变化、渠道库存、金融属性减弱等），并预测未来30天的筑底或波动逻辑。
-    4. 严禁幻觉：如果搜索结果显示价格有企稳迹象，请如实反映。
+    【实时基准】
+    - 获取今日（${dateStr}）的实时批价。
     
-    当前真实日期：${dateStr}。
+    【多维度分析】
+    - 结合社会库存、酒厂投放节奏（如电商节投放）、以及当前的金融环境进行 30 天预测。
+    - 计算基于搜索结果的市场情绪分值（-100 到 100）。
+    
+    【输出要求】
+    - 历史数据（history）必须反映真实的每日波动。
+    - 预测数据（forecast）必须从今日（${dateStr}）的价格开始无缝衔接。
+    
+    要求输出 JSON 格式。
   `;
 
   try {
@@ -30,41 +37,58 @@ export const fetchMoutaiPrediction = async () => {
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
-        temperature: 0.1,
+        temperature: 0, // 降低随机性，确保数据严谨
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            market_summary: {
-              type: Type.STRING,
-              description: "简短的市场分析报告，重点解释当前 1500 元价格位附近的成因及未来30天趋势（120字内）。"
-            },
-            current_price: {
-              type: Type.NUMBER,
-              description: "今日校准后的 24/25 年飞天茅台真实批价。"
+            market_summary: { type: Type.STRING, description: "今日行情研判及波动原因。" },
+            sentiment_score: { type: Type.NUMBER, description: "量化市场情绪分值。" },
+            current_price: { type: Type.NUMBER, description: "今日实时校准批价。" },
+            history: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  date: { type: Type.STRING, description: "YYYY-MM-DD" },
+                  price: { type: Type.NUMBER, description: "当日真实批价" }
+                },
+                required: ["date", "price"]
+              }
             },
             forecast: {
               type: Type.ARRAY,
               items: {
                 type: Type.OBJECT,
                 properties: {
-                  date: { type: Type.STRING, description: "日期，格式为 YYYY-MM-DD" },
-                  price: { type: Type.NUMBER, description: "该日期的预测价格" }
+                  date: { type: Type.STRING },
+                  price: { type: Type.NUMBER }
                 },
                 required: ["date", "price"]
               }
             }
           },
-          required: ["market_summary", "current_price", "forecast"]
+          required: ["market_summary", "sentiment_score", "current_price", "history", "forecast"]
         }
       },
     });
 
-    const data = JSON.parse(response.text || "{}");
+    const rawText = response.text || "{}";
+    let data;
+    try {
+        data = JSON.parse(rawText);
+    } catch (e) {
+        throw new Error("AI 数据终端解析异常，请尝试重置。");
+    }
+
+    if (!data.current_price || !Array.isArray(data.history) || data.history.length < 5) {
+        throw new Error("检索到的历史价格样本不足，无法生成高精度曲线。");
+    }
+
     const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks
       ?.filter(chunk => chunk.web)
       .map((chunk: any) => ({
-        title: chunk.web?.title || '行业行情参考',
+        title: chunk.web?.title || '行业数据来源',
         uri: chunk.web?.uri || '#'
       })) || [];
 
