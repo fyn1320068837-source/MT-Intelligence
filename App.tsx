@@ -23,10 +23,11 @@ const App: React.FC = () => {
     error: null
   });
 
-  const updateMarketData = useCallback(async () => {
+  const updateMarketData = useCallback(async (isForce = false) => {
     setState(prev => ({ ...prev, data: { ...prev.data, isUpdating: true }, error: null }));
     try {
-      const { data, sources } = await fetchMoutaiPrediction();
+      // 传递强制刷新标志
+      const { data, sources } = await fetchMoutaiPrediction(isForce);
       
       setState(prev => ({
         ...prev,
@@ -54,7 +55,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     updateMarketData();
-    const interval = setInterval(updateMarketData, 3600000); 
+    const interval = setInterval(() => updateMarketData(false), 3600000); 
     return () => clearInterval(interval);
   }, [updateMarketData]);
 
@@ -100,12 +101,11 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#050505] text-gray-200 selection:bg-[#C41E3A]/30 pb-20">
-      {/* Added AlertTriangle to lucide-react imports above */}
       {state.error && (
         <div className="bg-red-600/20 border-b border-red-500/50 p-3 flex items-center justify-center gap-3 text-red-400 text-xs animate-in fade-in slide-in-from-top duration-300 z-[100] sticky top-0 backdrop-blur-md">
           <AlertTriangle className="w-4 h-4" />
           <span className="font-medium">{state.error}</span>
-          <button onClick={updateMarketData} className="px-3 py-1 bg-red-500/20 hover:bg-red-500/40 rounded-full border border-red-500/50 transition-all font-bold">刷新终端</button>
+          <button onClick={() => updateMarketData(true)} className="px-3 py-1 bg-red-500/20 hover:bg-red-500/40 rounded-full border border-red-500/50 transition-all font-bold">刷新终端</button>
         </div>
       )}
 
@@ -119,18 +119,18 @@ const App: React.FC = () => {
               <h1 className="text-xl font-black tracking-tighter text-white uppercase italic leading-none">Moutai Intelligence</h1>
               <p className="text-[10px] text-red-100/60 flex items-center gap-1 mt-1 font-mono uppercase tracking-wider">
                 <Globe className="w-2.5 h-2.5 text-blue-400" />
-                Real-time Market Calibration Engine
+                Real-time Flash Calibration Engine
               </p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <button 
-              onClick={updateMarketData}
+              onClick={() => updateMarketData(true)}
               disabled={state.data.isUpdating}
               className={`flex items-center gap-2 px-6 py-2.5 bg-white/5 hover:bg-white/10 transition-all rounded-full border border-white/10 text-xs font-black tracking-wide active:scale-95 ${state.data.isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <RefreshCcw className={`w-3.5 h-3.5 ${state.data.isUpdating ? 'animate-spin' : ''}`} />
-              {state.data.isUpdating ? '同步中...' : '同步实时行情'}
+              {state.data.isUpdating ? '极速同步中...' : '同步实时行情'}
             </button>
           </div>
         </div>
@@ -252,12 +252,6 @@ const App: React.FC = () => {
                   </div>
                 )}
              </div>
-
-             {isEditingHistory && (
-               <p className="mt-4 text-[9px] text-neutral-500 text-center italic font-medium">
-                 注意：修改历史价格将立即影响图表趋势。
-               </p>
-             )}
           </section>
         </div>
 
@@ -293,7 +287,7 @@ const App: React.FC = () => {
                <MoutaiChart 
                   data={state.data.history} 
                   prediction={state.data.prediction} 
-                  onRetry={updateMarketData}
+                  onRetry={() => updateMarketData(true)}
                   isLoading={state.data.isUpdating}
                />
                {state.data.isUpdating && (
@@ -301,8 +295,8 @@ const App: React.FC = () => {
                     <div className="flex flex-col items-center gap-6">
                       <div className="w-16 h-16 border-4 border-[#C41E3A] border-t-transparent rounded-full animate-spin"></div>
                       <div className="text-center">
-                        <p className="text-[14px] text-[#D4AF37] font-black uppercase tracking-[0.5em] animate-pulse">Synchronizing Global Liquidity Data...</p>
-                        <p className="text-[10px] text-neutral-500 mt-3 uppercase font-mono tracking-widest">正在聚合行业垂直报价源，请稍候</p>
+                        <p className="text-[14px] text-[#D4AF37] font-black uppercase tracking-[0.5em] animate-pulse">Flash Sync in Progress...</p>
+                        <p className="text-[10px] text-neutral-500 mt-3 uppercase font-mono tracking-widest">正在利用 Flash 模型进行毫秒级行情聚合</p>
                       </div>
                     </div>
                  </div>
@@ -334,11 +328,6 @@ const App: React.FC = () => {
                      <ExternalLink className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
                    </a>
                  ))}
-                 {state.data.sources.length === 0 && !state.data.isUpdating && (
-                   <div className="col-span-full py-4 text-center border border-dashed border-neutral-800 rounded-2xl text-neutral-600 text-[10px] font-mono uppercase">
-                     正在等待数据节点同步...
-                   </div>
-                 )}
               </div>
             </div>
           </section>
@@ -348,15 +337,15 @@ const App: React.FC = () => {
       <footer className="bg-black/95 border-t border-neutral-800 px-6 py-5 flex flex-col md:flex-row gap-6 md:gap-12 overflow-hidden items-center fixed bottom-0 w-full z-40 backdrop-blur-3xl shadow-[0_-20px_40px_rgba(0,0,0,0.8)]">
         <div className="flex-shrink-0 flex items-center gap-3 text-[#C41E3A] text-[12px] font-black uppercase bg-[#C41E3A]/10 px-6 py-2 rounded-full border border-[#C41E3A]/20 tracking-[0.2em]">
           <Activity className="w-4 h-4" />
-          Quant Terminal v3.0
+          Quant Terminal v3.0 • Flash Mode
         </div>
         <div className="flex-1 w-full overflow-hidden">
           <div className="flex gap-24 animate-scroll whitespace-nowrap text-[10px] text-neutral-500 font-mono items-center uppercase font-bold">
             <span className="flex items-center gap-2 text-white">实时批价基准: ¥{state.data.currentPrice || '---'}</span>
-            <span className="flex items-center gap-2 text-blue-400">行情校准源: 垂直白酒报价聚合</span>
-            <span className="flex items-center gap-2 text-[#D4AF37]">神经网络模型: GEMINI-3 PRO-INDEX</span>
-            <span className="flex items-center gap-2 text-green-500">● 连接状态: 已加密连接</span>
-            <span className="opacity-30 italic">免责声明：本预测仅基于市场情绪与历史趋势分析，不构成任何投资建议。</span>
+            <span className="flex items-center gap-2 text-blue-400">校准模式: Flash 推理加速</span>
+            <span className="flex items-center gap-2 text-[#D4AF37]">模型: GEMINI-3 FLASH</span>
+            <span className="flex items-center gap-2 text-green-500">● 智能缓存: 已激活</span>
+            <span className="opacity-30 italic">免责声明：本预测由 Flash 引擎生成，旨在提供快速决策参考。</span>
           </div>
         </div>
       </footer>

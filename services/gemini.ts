@@ -1,37 +1,33 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
 
-// Use gemini-3-pro-preview for complex reasoning and data forecasting tasks.
-const MODEL_NAME = 'gemini-3-pro-preview'; 
+// 切换为 Flash 模型以获得极速响应，同时保持搜索增强能力
+const MODEL_NAME = 'gemini-3-flash-preview'; 
 
-export const fetchMoutaiPrediction = async () => {
-  // Always use process.env.API_KEY directly as per SDK guidelines.
+// 简单的内存缓存
+let cache: { data: any, sources: any, timestamp: number } | null = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5分钟缓存
+
+export const fetchMoutaiPrediction = async (forceRefresh = false) => {
+  const now = Date.now();
+  if (!forceRefresh && cache && (now - cache.timestamp < CACHE_DURATION)) {
+    console.log("Using cached market data...");
+    return { data: cache.data, sources: cache.sources };
+  }
+
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
   const today = new Date();
   const dateStr = today.toISOString().split('T')[0];
 
   const prompt = `
-    你是一名白酒行业首席数据分析师。当前任务是为飞天茅台（53度/500ml/散瓶）建立精准的价格模型。
+    作为首席分析师，请极速校准飞天茅台（53度500ml散瓶）价格模型。
     
-    【核心指令：历史价格校准】
-    1. 利用 Google Search 检索过去 7 天（从昨日倒推）每日的行业公认批发价（批价）。
-    2. 请搜索“今日酒价”、“酒价行情”、“不瓶瓶”或“酒说”等专业垂直媒体的每日报价单。
-    3. **严禁生成估算数据**。如果某日数据缺失，请根据每日报价进行合理比对。
+    1. 搜索“今日酒价”或“不瓶瓶”过去7天的真实批价。
+    2. 检索今日（${dateStr}）最新批价。
+    3. 预测未来30天趋势（包含置信区间）。
+    4. 评估市场情绪（-100到100）。
     
-    【实时基准】
-    - 获取今日（${dateStr}）的实时批价。
-    
-    【多维度分析】
-    - 结合社会库存、酒厂投放节奏、以及当前金融环境进行 30 天预测。
-    - 为每日预测提供“置信区间”（上限与下限），反映市场波动风险。
-    - 计算基于搜索结果的市场情绪分值（-100 到 100）。
-    
-    【输出要求】
-    - 历史数据（history）必须反映真实的每日波动。
-    - 预测数据（forecast）必须从今日（${dateStr}）的价格开始衔接，并包含上限 (upper_bound) 和下限 (lower_bound)。
-    
-    要求输出 JSON 格式。
+    输出严格 JSON 格式。
   `;
 
   try {
@@ -40,7 +36,7 @@ export const fetchMoutaiPrediction = async () => {
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
-        temperature: 0, 
+        temperature: 0.1, // 略微增加确定性以提升生成速度
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -78,12 +74,10 @@ export const fetchMoutaiPrediction = async () => {
       },
     });
 
-    // Access the .text property directly (do not call it as a function).
     const rawText = response.text || "{}";
     let data;
     try {
         const parsed = JSON.parse(rawText);
-        // Explicitly map keys and ensure arrays exist to prevent .map() errors
         data = {
           market_summary: parsed.market_summary || "",
           sentiment_score: parsed.sentiment_score || 0,
@@ -100,26 +94,26 @@ export const fetchMoutaiPrediction = async () => {
           }))
         };
     } catch (e) {
-        throw new Error("AI 数据终端解析异常。");
+        throw new Error("解析异常");
     }
 
     if (!data.current_price || data.history.length === 0) {
-        throw new Error("检索到的数据不完整。");
+        throw new Error("数据不全");
     }
 
     const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks
       ?.filter(chunk => chunk.web)
       .map((chunk: any) => ({
-        title: chunk.web?.title || '行业数据来源',
+        title: chunk.web?.title || '数据源',
         uri: chunk.web?.uri || '#'
       })) || [];
 
-    return { 
-      data,
-      sources 
-    };
+    // 更新缓存
+    cache = { data, sources, timestamp: Date.now() };
+
+    return { data, sources };
   } catch (error) {
-    console.error("Gemini API Error:", error);
+    console.error("API Error:", error);
     throw error;
   }
 };
